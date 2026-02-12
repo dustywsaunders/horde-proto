@@ -192,9 +192,9 @@ export default class GameScene extends Phaser.Scene {
       },
       {
         key: "fireRate",
-        label: "Increase Fire Rate (+50)",
+        label: "Increase Fire Rate (-50)",
         apply: () => {
-          this.fireRate += 50;
+          this.fireRate -= 50;
         },
       },
       {
@@ -277,11 +277,6 @@ export default class GameScene extends Phaser.Scene {
       body.setVelocityY(speed);
     }
 
-    // ADD THIS AFTER ENEMIES CAN BE REMOVED
-    // this.enemyList.forEach(enemy => {
-    //    ...
-    // })
-
     // Update enemy controls
     this.enemies.getChildren().forEach((enemy) => {
       // Movement
@@ -292,22 +287,6 @@ export default class GameScene extends Phaser.Scene {
         const speed = this.enemySpeed;
         enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
       }
-
-      // Color based on HP
-      // if (!enemy.isDead) {
-      //   const color = Phaser.Display.Color.Interpolate.ColorWithColor(
-      //     new Phaser.Display.Color(255, 0, 0),
-      //     new Phaser.Display.Color(0, 0, 0),
-      //     enemy.maxHp,
-      //     enemy.maxHp - enemy.hp,
-      //   );
-      //   const hexColor = Phaser.Display.Color.GetColor(
-      //     color.r,
-      //     color.g,
-      //     color.b,
-      //   );
-      //   enemy.setFillStyle(hexColor);
-      // }
     });
 
     // Projectiles
@@ -405,6 +384,8 @@ export default class GameScene extends Phaser.Scene {
     this.timerText.setText(`${minutes}:${paddedSeconds}`);
   }
 
+  // --- FUNCTIONS --- //
+
   spawnEnemy() {
     const { width, height } = this.scale;
 
@@ -459,6 +440,7 @@ export default class GameScene extends Phaser.Scene {
 
     console.log("HP:", this.playerHp);
 
+    // Trigger player death
     if (this.playerHp <= 0 && !this.isPlayerDead) {
       this.isPlayerDead = true;
       this.playerHp = 0;
