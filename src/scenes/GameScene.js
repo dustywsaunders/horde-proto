@@ -51,6 +51,10 @@ export default class GameScene extends Phaser.Scene {
       down: "S",
       left: "A",
       right: "D",
+      upArrow: "UP",
+      downArrow: "DOWN",
+      leftArrow: "LEFT",
+      rightArrow: "RIGHT",
     });
 
     this.playerMaxHp = 100;
@@ -164,26 +168,26 @@ export default class GameScene extends Phaser.Scene {
 
     // Upgrades
     this.upgrades = [
-      {
-        key: "maxHp",
-        label: "Increase Max Health (+20)",
-        apply: () => {
-          this.playerMaxHp += 20;
-          this.playerHp += 20;
-        },
-      },
+      // {
+      //   key: "maxHp",
+      //   label: "Increase Max Health (+20)",
+      //   apply: () => {
+      //     this.playerMaxHp += 20;
+      //     this.playerHp += 20;
+      //   },
+      // },
       {
         key: "moveSpeed",
-        label: "Increase Move Speed (+40)",
+        label: "Increase Move Speed (+10)",
         apply: () => {
-          this.playerSpeed += 40;
+          this.playerSpeed += 10;
         },
       },
       {
         key: "enemySlow",
-        label: "Decrease Enemy Speed (-10)",
+        label: "Decrease Enemy Speed (-5)",
         apply: () => {
-          this.enemySpeed = Math.max(20, this.enemySpeed - 10);
+          this.enemySpeed = Math.max(20, this.enemySpeed - 5);
         },
       },
       {
@@ -211,6 +215,42 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update() {
+    // Pause gameplay during upgrade
+    if (this.isChoosingUpgrade) {
+      if (
+        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.up) ||
+        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.w)
+      ) {
+        this.selectedUpgradeIndex =
+          (this.selectedUpgradeIndex - 1 + this.upgradeButtons.length) %
+          this.upgradeButtons.length;
+
+        this.updateUpgradeSelection();
+      }
+
+      if (
+        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.down) ||
+        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.s)
+      ) {
+        this.selectedUpgradeIndex =
+          (this.selectedUpgradeIndex + 1) % this.upgradeButtons.length;
+
+        this.updateUpgradeSelection();
+      }
+
+      if (
+        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.confirm) ||
+        Phaser.Input.Keyboard.JustDown(this.upgradeKeys.enter)
+      ) {
+        const chosen = this.currentUpgradeChoices[this.selectedUpgradeIndex];
+        chosen.apply();
+
+        this.closeUpgradeMenu();
+      }
+
+      return;
+    }
+
     // Set death state
     if (this.isPlayerDead) {
       this.player.body.setVelocity(0);
@@ -223,15 +263,17 @@ export default class GameScene extends Phaser.Scene {
 
     body.setVelocity(0);
 
-    if (this.keys.left.isDown) {
+    // Horizontal
+    if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
       body.setVelocityX(-speed);
-    } else if (this.keys.right.isDown) {
+    } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
       body.setVelocityX(speed);
     }
 
-    if (this.keys.up.isDown) {
+    // Vertical
+    if (this.keys.up.isDown || this.keys.upArrow.isDown) {
       body.setVelocityY(-speed);
-    } else if (this.keys.down.isDown) {
+    } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
       body.setVelocityY(speed);
     }
 
@@ -281,16 +323,32 @@ export default class GameScene extends Phaser.Scene {
       const speed = proj.speed;
 
       if (length < 5) {
-        // Hit enemy
+        // Apply damage
         proj.target.hp -= this.weaponDamage;
+
+        // --- HIT FLASH ---
+        proj.target.setFillStyle(0xff9999); // lighter red
+
+        this.time.delayedCall(50, () => {
+          if (proj.target && proj.target.active) {
+            proj.target.setFillStyle(0xff0000); // back to normal red
+          }
+        });
+
+        // Death check
         if (proj.target.hp <= 0 && !proj.target.isDead) {
           proj.target.hp = 0;
           proj.target.isDead = true;
+
+          // Store position BEFORE destroy
+          const { x, y } = proj.target;
+
           proj.target.destroy();
 
           // Drop XP orb
-          this.spawnXpOrb(proj.target.x, proj.target.y, proj.target.xpValue);
+          this.spawnXpOrb(x, y, proj.target.xpValue);
         }
+
         proj.destroy();
         return;
       }
@@ -339,7 +397,6 @@ export default class GameScene extends Phaser.Scene {
     this.levelText.setText("Level: " + this.playerLevel);
 
     // Timer
-    const elapsed = Math.floor((this.time.now - this.startTime) / 1000);
     const elapsedSeconds = Math.floor((this.time.now - this.startTime) / 1000);
     const minutes = Math.floor(elapsedSeconds / 60);
     const seconds = elapsedSeconds % 60;
@@ -485,9 +542,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   collectXp(player, orb) {
-    this.xp += orb.value;
+    this.xp += orb.value * this.xpMultiplier;
     orb.destroy();
-
     this.checkLevelUp();
   }
 
@@ -495,24 +551,111 @@ export default class GameScene extends Phaser.Scene {
     while (this.xp >= this.xpToLevel) {
       this.xp -= this.xpToLevel;
       this.playerLevel += 1;
-
-      // Simple auto-upgrade: increase projectile damage by 2
-      this.projectileDamage = (this.projectileDamage || 10) + 2;
-
-      // Optionally increase XP required for next level
       this.xpToLevel = Math.floor(this.xpToLevel * 1.3);
 
-      // TEMP: Show level-up feedback
-      const levelUpText = this.add
-        .text(400, 200, "LEVEL UP", {
-          fontSize: "24px",
-          fill: "#ffff00",
-        })
-        .setOrigin(0.5);
-
-      this.time.delayedCall(2000, () => {
-        levelUpText.destroy();
-      });
+      this.showUpgradeMenu();
     }
+  }
+
+  showUpgradeMenu() {
+    this.physics.pause();
+    this.isChoosingUpgrade = true;
+    this.selectedUpgradeIndex = 0;
+
+    // Pause enemy spawning
+    if (this.enemySpawnEvent) {
+      this.enemySpawnEvent.paused = true;
+    }
+
+    const overlay = this.add
+      .rectangle(400, 300, 800, 600, 0x000000, 0.8)
+      .setDepth(2000);
+
+    const choices = Phaser.Utils.Array.Shuffle([...this.upgrades]).slice(0, 3);
+    this.currentUpgradeChoices = choices;
+
+    this.upgradeButtons = [];
+
+    choices.forEach((upgrade, index) => {
+      const y = 250 + index * 90;
+
+      const button = this.add
+        .text(400, y, upgrade.label, {
+          fontSize: "26px",
+          fill: "#ffffff",
+          backgroundColor: "#333333",
+          padding: { x: 20, y: 10 },
+        })
+        .setOrigin(0.5)
+        .setDepth(2001);
+
+      this.upgradeButtons.push(button);
+    });
+
+    this.upgradeOverlay = overlay;
+
+    this.updateUpgradeSelection();
+
+    // Setup keys
+    this.upgradeKeys = this.input.keyboard.addKeys({
+      up: "UP",
+      down: "DOWN",
+      w: "W",
+      s: "S",
+      confirm: "SPACE",
+      enter: "ENTER",
+    });
+
+    this.statsText = this.add
+      .text(
+        400,
+        200,
+        `
+        Level: ${this.playerLevel}
+        HP: ${this.playerHp}/${this.playerMaxHp}
+        Speed: ${this.playerSpeed}
+        Damage: ${this.weaponDamage}
+        Fire Rate: 1/${this.fireRate}mss
+        Enemy Speed: ${this.enemySpeed}
+        XP Multiplier: x ${this.xpMultiplier}
+        `,
+        {
+          fontSize: "16px", // slightly smaller
+          fill: "#ffffff",
+          align: "center", // center-align text
+          lineSpacing: 4,
+        },
+      )
+      .setOrigin(0.65, 0.9) // center horizontally
+      .setDepth(2001);
+  }
+
+  updateUpgradeSelection() {
+    this.upgradeButtons.forEach((button, index) => {
+      if (index === this.selectedUpgradeIndex) {
+        button.setStyle({
+          backgroundColor: "#550000",
+        });
+      } else {
+        button.setStyle({
+          backgroundColor: "#333333",
+        });
+      }
+    });
+  }
+
+  closeUpgradeMenu() {
+    this.upgradeOverlay.destroy();
+    this.upgradeButtons.forEach((b) => b.destroy());
+
+    this.isChoosingUpgrade = false;
+    this.physics.resume();
+
+    // Resume enemy spawning
+    if (this.enemySpawnEvent) {
+      this.enemySpawnEvent.paused = false;
+    }
+
+    this.statsText.destroy();
   }
 }
