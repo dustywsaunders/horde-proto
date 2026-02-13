@@ -434,6 +434,15 @@ export default class GameScene extends Phaser.Scene {
 
     this.playerHp = Phaser.Math.Clamp(this.playerHp - 10, 0, this.playerMaxHp);
 
+    // --- PLAYER HIT FLASH ---
+    this.player.setFillStyle(0xff4444); // flash red on hit
+
+    this.time.delayedCall(80, () => {
+      if (!this.isPlayerDead && this.player.active) {
+        this.player.setFillStyle(0x00ff00); // back to normal green
+      }
+    });
+
     if (this.playerHp < 0) {
       this.playerHp = 0;
     }
