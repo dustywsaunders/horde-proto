@@ -11,19 +11,31 @@ export default class GameScene extends Phaser.Scene {
     // Set world bounds
     this.physics.world.setBounds(0, 0, 800, 600);
 
-    // Set default values
-    this.playerSpeed = 200;
-    this.enemySpeed = 80;
-    this.fireRate = 1000;
-    this.weaponDamage = 15;
-    this.xpMultiplier = 1;
-    this.enemyHealth = 30;
+    // Set default player values
+    this.playerStats = {
+      moveSpeed: 200,
+      maxHp: 100,
+      hp: 100,
+      damage: 15,
+      fireRate: 1000,
+      xpMultiplier: 1,
+      level: 1,
+      xp: 0,
+      xpToLevel: 50,
+    };
 
     // Add simple player placeholder
     this.player = this.add.rectangle(400, 300, 40, 40, 0x00ff00);
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
     this.player.setDepth(2);
+
+    // Enemy base stats
+    this.enemyStats = {
+      moveSpeed: 80,
+      maxHp: 30,
+      xpValue: 10,
+    };
 
     // Create enemy group
     this.enemies = this.physics.add.group();
@@ -57,8 +69,8 @@ export default class GameScene extends Phaser.Scene {
       rightArrow: "RIGHT",
     });
 
-    this.playerMaxHp = 100;
-    this.playerHp = 100;
+    this.playerStats.maxHp = 100;
+    this.playerStats.hp = 100;
     this.isPlayerDead = false;
 
     this.lastDamageTime = 0;
@@ -68,7 +80,7 @@ export default class GameScene extends Phaser.Scene {
     this.projectiles = this.physics.add.group();
 
     this.time.addEvent({
-      delay: this.fireRate, // ms between shots
+      delay: this.playerStats.fireRate, // ms between shots
       callback: this.fireProjectile,
       callbackScope: this,
       loop: true,
@@ -119,14 +131,14 @@ export default class GameScene extends Phaser.Scene {
 
     // xp bar
     // Player Level
-    this.playerLevel = 1;
-    this.xp = 0;
-    this.xpToLevel = 50; // first level threshold
+    this.playerStats.level = 1;
+    this.playerStats.xp = 0;
+    this.playerStats.xpToLevel = 50; // first level threshold
 
     this.levelText = this.add.text(
       580,
       10, // top-right
-      "Level: " + this.playerLevel,
+      "Level: " + this.playerStats.level,
       { fontSize: "18px", fill: "#ffffff" },
     );
     this.levelText.setDepth(1000);
@@ -172,22 +184,25 @@ export default class GameScene extends Phaser.Scene {
       //   key: "maxHp",
       //   label: "Increase Max Health (+20)",
       //   apply: () => {
-      //     this.playerMaxHp += 20;
-      //     this.playerHp += 20;
+      //     this.playerStats.maxHp += 20;
+      //     this.playerStats.hp += 20;
       //   },
       // },
       {
         key: "moveSpeed",
         label: "Increase Move Speed (+10)",
         apply: () => {
-          this.playerSpeed += 10;
+          this.playerStats.moveSpeed += 10;
         },
       },
       {
         key: "enemySlow",
         label: "Decrease Enemy Speed (-5)",
         apply: () => {
-          this.enemySpeed = Math.max(20, this.enemySpeed - 5);
+          this.enemyStats.moveSpeed = Math.max(
+            20,
+            this.enemyStats.moveSpeed - 5,
+          );
         },
       },
       {
@@ -201,14 +216,14 @@ export default class GameScene extends Phaser.Scene {
         key: "damage",
         label: "Increase Weapon Damage (+10)",
         apply: () => {
-          this.weaponDamage += 10;
+          this.playerStats.damage += 10;
         },
       },
       {
         key: "xpBoost",
         label: "Increase XP Per Orb (+1)",
         apply: () => {
-          this.xpMultiplier += 1;
+          this.playerStats.xpMultiplier += 1;
         },
       },
     ];
@@ -232,7 +247,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (!this.isPlayerDead) {
       const healthPercent = Phaser.Math.Clamp(
-        this.playerHp / this.playerMaxHp,
+        this.playerStats.hp / this.playerStats.maxHp,
         0,
         1,
       );
@@ -251,13 +266,19 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.healthText.setText(
-      `${Math.floor(this.playerHp)} / ${this.playerMaxHp}`,
+      `${Math.floor(this.playerStats.hp)} / ${this.playerStats.maxHp}`,
     );
 
-    const xpPercent = Phaser.Math.Clamp(this.xp / this.xpToLevel, 0, 1);
+    const xpPercent = Phaser.Math.Clamp(
+      this.playerStats.xp / this.playerStats.xpToLevel,
+      0,
+      1,
+    );
     this.xpBar.width = Math.floor(200 * xpPercent);
-    this.xpText.setText(`${this.xp} / ${this.xpToLevel}`);
-    this.levelText.setText("Level: " + this.playerLevel);
+    this.xpText.setText(
+      `${this.playerStats.xp} / ${this.playerStats.xpToLevel}`,
+    );
+    this.levelText.setText("Level: " + this.playerStats.level);
   }
 
   updateTimer() {
@@ -270,7 +291,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   handlePlayerMovement() {
-    const speed = this.playerSpeed;
+    const speed = this.playerStats.moveSpeed;
     const body = this.player.body;
 
     body.setVelocity(0);
@@ -315,9 +336,9 @@ export default class GameScene extends Phaser.Scene {
     enemy.body.setImmovable(true);
     enemy.body.setCircle(12);
     enemy.body.setCollideWorldBounds(true);
-    enemy.maxHp = this.enemyHealth; // basic HP for first prototype
+    enemy.maxHp = this.enemyStats.maxHp;
     enemy.hp = enemy.maxHp;
-    enemy.xpValue = 10; // XP granted when killed
+    enemy.xpValue = this.enemyStats.xpValue;
     enemy.isDead = false;
     enemy.setFillStyle(0xff0000);
     enemy.setDepth(3);
@@ -332,7 +353,7 @@ export default class GameScene extends Phaser.Scene {
       const length = Math.sqrt(dx * dx + dy * dy);
 
       if (length > 0) {
-        const speed = this.enemySpeed;
+        const speed = this.enemyStats.moveSpeed;
         enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
       }
     });
@@ -347,7 +368,11 @@ export default class GameScene extends Phaser.Scene {
 
     this.lastDamageTime = now;
 
-    this.playerHp = Phaser.Math.Clamp(this.playerHp - 10, 0, this.playerMaxHp);
+    this.playerStats.hp = Phaser.Math.Clamp(
+      this.playerStats.hp - 10,
+      0,
+      this.playerStats.maxHp,
+    );
 
     // --- PLAYER HIT FLASH ---
     this.player.setFillStyle(0xff4444); // flash red on hit
@@ -358,16 +383,14 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    if (this.playerHp < 0) {
-      this.playerHp = 0;
+    if (this.playerStats.hp < 0) {
+      this.playerStats.hp = 0;
     }
 
-    console.log("HP:", this.playerHp);
-
     // Trigger player death
-    if (this.playerHp <= 0 && !this.isPlayerDead) {
+    if (this.playerStats.hp <= 0 && !this.isPlayerDead) {
       this.isPlayerDead = true;
-      this.playerHp = 0;
+      this.playerStats.hp = 0;
       this.player.setFillStyle(0x555555);
 
       // Stop spawning
@@ -457,7 +480,7 @@ export default class GameScene extends Phaser.Scene {
       const speed = proj.speed;
 
       if (length < 5) {
-        proj.target.hp -= this.weaponDamage;
+        proj.target.hp -= this.playerStats.damage;
 
         proj.target.setFillStyle(0xff9999);
 
@@ -496,16 +519,16 @@ export default class GameScene extends Phaser.Scene {
   }
 
   collectXp(player, orb) {
-    this.xp += orb.value * this.xpMultiplier;
+    this.playerStats.xp += orb.value * this.playerStats.xpMultiplier;
     orb.destroy();
     this.checkLevelUp();
   }
 
   checkLevelUp() {
-    while (this.xp >= this.xpToLevel) {
-      this.xp -= this.xpToLevel;
-      this.playerLevel += 1;
-      this.xpToLevel = Math.floor(this.xpToLevel * 1.3);
+    while (this.playerStats.xp >= this.playerStats.xpToLevel) {
+      this.playerStats.xp -= this.playerStats.xpToLevel;
+      this.playerStats.level += 1;
+      this.playerStats.xpToLevel = Math.floor(this.playerStats.xpToLevel * 1.3);
 
       this.showUpgradeMenu();
     }
@@ -565,13 +588,13 @@ export default class GameScene extends Phaser.Scene {
         400,
         200,
         `
-        Level: ${this.playerLevel}
-        HP: ${this.playerHp}/${this.playerMaxHp}
+        Level: ${this.playerStats.level}
+        HP: ${this.playerStats.hp}/${this.playerStats.maxHp}
         Speed: ${this.playerSpeed}
         Damage: ${this.weaponDamage}
         Fire Rate: 1/${this.fireRate}mss
         Enemy Speed: ${this.enemySpeed}
-        XP Multiplier: x ${this.xpMultiplier}
+        XP Multiplier: x ${this.playerStats.xpMultiplier}
         `,
         {
           fontSize: "16px", // slightly smaller

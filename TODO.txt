@@ -1,4 +1,13 @@
 TO DO:
-1. Create start page w/ instructions on how to play. also says "Enter/Space to start game"
-2. On death screen add text that says "Enter/Space to retry". Goes back to start menu!!!
-3. Add health drops to increase total health pool.
+
+GAME FEATURES:
+- Create start page w/ instructions on how to play. also says "Enter/Space to start game"
+- On death screen add text that says "Enter/Space to retry". Goes back to start menu!!!
+- Add health drops to increase total health pool.
+
+REFACTORS:
+- Fix fireRate so upgrades actually change shooting speed dynamically
+- Extract a CombatSystem layer
+- Extract UI rendering layer
+- Move upgrade definitions into structured data format
+- Convert enemies into a small Enemy class
