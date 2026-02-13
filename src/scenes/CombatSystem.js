@@ -34,13 +34,9 @@ export default class CombatSystem {
       }
     });
 
-    const projectile = scene.add.rectangle(
-      scene.player.x,
-      scene.player.y,
-      8,
-      8,
-      0xffff00,
-    );
+    const projectile = scene.add.sprite(scene.player.x, scene.player.y, "disc");
+    projectile.setDisplaySize(16, 16);
+    projectile.rotation += 1;
 
     scene.physics.add.existing(projectile);
     projectile.body.setAllowGravity(false);
@@ -70,6 +66,28 @@ export default class CombatSystem {
         return;
       }
 
+      // Disc trail
+      const trail = scene.add.image(proj.x, proj.y, "disc");
+      trail.setDisplaySize(16, 16);
+      trail.setAlpha(0.3); // transparency
+      trail.setDepth(proj.depth - 1);
+
+      scene.tweens.add({
+        targets: trail,
+        alpha: 0,
+        scale: 0.5,
+        duration: 250, // length
+        onComplete: () => trail.destroy(),
+      });
+
+      // Projectile trail limiting
+      proj.trailTimer = 0;
+      proj.trailTimer += scene.game.loop.delta;
+
+      if (proj.trailTimer > 10) {
+        proj.trailTimer = 0; // spawn trail
+      }
+
       proj.body.setVelocity((dx / length) * speed, (dy / length) * speed);
     });
   }
@@ -79,12 +97,10 @@ export default class CombatSystem {
 
     enemy.hp -= scene.playerStats.damage;
 
-    enemy.setFillStyle(0xff9999);
+    enemy.setTint(0xffaaaa);
 
-    scene.time.delayedCall(50, () => {
-      if (enemy && enemy.active) {
-        enemy.setFillStyle(0xff0000);
-      }
+    this.scene.time.delayedCall(50, () => {
+      if (enemy.active) enemy.clearTint();
     });
 
     if (enemy.hp <= 0 && !enemy.isDead) {
@@ -97,6 +113,8 @@ export default class CombatSystem {
 
     enemy.isDead = true;
     const { x, y } = enemy;
+
+    scene.enemiesKilled++;
 
     enemy.destroy();
 

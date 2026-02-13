@@ -7,9 +7,17 @@ export default class GameScene extends Phaser.Scene {
     super("GameScene");
   }
 
-  preload() {}
+  preload() {
+    this.load.image("grass", "assets/backgrounds/grass.png");
+    this.load.image("player", "assets/sprites/player.png");
+    this.load.image("crayfish", "assets/sprites/crayfish.png");
+    this.load.image("disc", "assets/sprites/disc.png");
+  }
 
   create() {
+    // Add assets
+    this.add.tileSprite(400, 300, 800, 600, "grass").setDepth(-10);
+
     // Reset Safety
     this.isPlayerDead = false;
 
@@ -49,7 +57,8 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // Add simple player placeholder
-    this.player = this.add.rectangle(400, 300, 30, 30, 0x00ff00);
+    this.player = this.add.sprite(400, 300, "player");
+    this.player.setDisplaySize(40, 40); // keep collision feel the same
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
     this.player.setDepth(2);
@@ -80,6 +89,8 @@ export default class GameScene extends Phaser.Scene {
     );
 
     this.enemyList = this.enemies.getChildren();
+
+    this.enemiesKilled = 0;
 
     // Create player controls
     this.keys = this.input.keyboard.addKeys({
@@ -156,7 +167,7 @@ export default class GameScene extends Phaser.Scene {
       },
       {
         key: "fireRate",
-        label: "Increase Fire Rate (-50ms)",
+        label: "Increase Throw Rate (-50ms)",
         apply: () => {
           this.playerStats.fireRate = Math.max(
             100,
@@ -167,7 +178,7 @@ export default class GameScene extends Phaser.Scene {
       },
       {
         key: "damage",
-        label: "Increase Weapon Damage (+10)",
+        label: "Increase Disc Damage (+10)",
         apply: () => {
           this.playerStats.damage += 10;
         },
@@ -254,13 +265,13 @@ export default class GameScene extends Phaser.Scene {
     );
 
     // --- PLAYER HIT FLASH ---
-    this.player.setFillStyle(0xff4444); // flash red on hit
+    // this.player.setFillStyle(0xff4444); // flash red on hit
 
-    this.time.delayedCall(80, () => {
-      if (!this.isPlayerDead && this.player.active) {
-        this.player.setFillStyle(0x00ff00); // back to normal green
-      }
-    });
+    // this.time.delayedCall(80, () => {
+    //   if (!this.isPlayerDead && this.player.active) {
+    //     this.player.setFillStyle(0x00ff00); // back to normal green
+    //   }
+    // });
 
     if (this.playerStats.hp < 0) {
       this.playerStats.hp = 0;
@@ -270,7 +281,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.playerStats.hp <= 0 && !this.isPlayerDead) {
       this.isPlayerDead = true;
       this.playerStats.hp = 0;
-      this.player.setFillStyle(0x555555);
+      // this.player.setFillStyle(0x555555);
 
       // Stop spawning
       this.enemySpawnEvent.remove(false);
@@ -280,23 +291,25 @@ export default class GameScene extends Phaser.Scene {
         enemy.body.setVelocity(0);
       });
 
+      this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8).setDepth(1500);
+
       // Show death text
       const deathText = this.add
-        .text(400, 300, "YOU DIED", {
-          fontSize: "48px",
+        .text(400, 300, "YOU HAVE BEEN SLAIN BY THE CRAYFISH", {
+          fontSize: "36px",
           fill: "#ffffff",
         })
         .setOrigin(0.5);
-      deathText.setDepth(1000);
+      deathText.setDepth(2000);
 
       // Restart instruction
       this.add
         .text(400, 360, "Press ENTER or SPACE to return to menu", {
           fontSize: "20px",
-          fill: "#cccccc",
+          fill: "#ffffff",
         })
         .setOrigin(0.5)
-        .setDepth(1000);
+        .setDepth(2000);
 
       // Listen for restart input
       this.deathKeys = this.input.keyboard.addKeys({
@@ -336,7 +349,8 @@ export default class GameScene extends Phaser.Scene {
       y = height;
     }
 
-    const enemy = this.add.rectangle(x, y, 25, 25, 0xff0000);
+    const enemy = this.add.sprite(x, y, "crayfish");
+    enemy.setDisplaySize(25, 25);
     this.physics.add.existing(enemy);
     enemy.body.setAllowGravity(false);
     enemy.body.setImmovable(true);
@@ -346,7 +360,7 @@ export default class GameScene extends Phaser.Scene {
     enemy.hp = enemy.maxHp;
     enemy.xpValue = this.enemyStats.xpValue;
     enemy.isDead = false;
-    enemy.setFillStyle(0xff0000);
+    enemy.setTint(0xffaaaa);
     enemy.setDepth(3);
 
     this.enemies.add(enemy);
@@ -484,11 +498,11 @@ export default class GameScene extends Phaser.Scene {
         400,
         200,
         `
-        Level: ${this.playerStats.level}
-        HP: ${this.playerStats.hp}/${this.playerStats.maxHp}
-        Speed: ${this.playerStats.moveSpeed}
-        Damage: ${this.playerStats.damage}
-        Fire Rate: 1/${this.playerStats.fireRate}ms
+        Player Level: ${this.playerStats.level}
+        Player HP: ${this.playerStats.hp}/${this.playerStats.maxHp}
+        Disc Speed: ${this.playerStats.moveSpeed}
+        Disc Damage: ${this.playerStats.damage}
+        Throw Rate: 1/${this.playerStats.fireRate}ms
         Enemy Speed: ${this.enemyStats.moveSpeed}
         XP Multiplier: x ${this.playerStats.xpMultiplier}
         `,
@@ -543,7 +557,7 @@ export default class GameScene extends Phaser.Scene {
     this.upgradeButtons.forEach((button, index) => {
       if (index === this.selectedUpgradeIndex) {
         button.setStyle({
-          backgroundColor: "#550000",
+          backgroundColor: "#0096a1ff",
         });
       } else {
         button.setStyle({

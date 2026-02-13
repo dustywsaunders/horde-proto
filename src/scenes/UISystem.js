@@ -10,9 +10,9 @@ export default class UISystem {
 
     // Enemy counter
     this.enemyCounterText = scene.add
-      .text(10, 10, "Enemies: 0", {
+      .text(10, 10, "Kill Count: 0", {
         fontSize: "18px",
-        fill: "#ffffff",
+        fill: "#393939ff",
       })
       .setDepth(1000)
       .setScrollFactor(0);
@@ -36,14 +36,14 @@ export default class UISystem {
     this.healthText = scene.add
       .text(10, 65, "", {
         fontSize: "14px",
-        fill: "#ffffff",
+        fill: "#393939ff",
       })
       .setScrollFactor(0)
       .setDepth(1002);
 
     // Level text
     this.levelText = scene.add
-      .text(580, 10, "Level: 1", { fontSize: "18px", fill: "#ffffff" })
+      .text(580, 10, "Level: 1", { fontSize: "18px", fill: "#393939ff" })
       .setDepth(1000)
       .setScrollFactor(0);
 
@@ -57,7 +57,7 @@ export default class UISystem {
 
     // XP bar fill
     this.xpBar = scene.add
-      .rectangle(580, 40, 0, 20, 0x0000ff)
+      .rectangle(580, 40, 0, 20, 0x00aaff)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(1001)
@@ -66,7 +66,7 @@ export default class UISystem {
     this.xpText = scene.add
       .text(790, 65, "", {
         fontSize: "14px",
-        fill: "#ffffff",
+        fill: "#393939ff",
       })
       .setOrigin(1, 0)
       .setScrollFactor(0)
@@ -74,7 +74,7 @@ export default class UISystem {
 
     // Timer
     this.timerText = scene.add
-      .text(400, 10, "0:00", { fontSize: "18px", fill: "#ffffff" })
+      .text(400, 10, "0:00", { fontSize: "18px", fill: "#393939ff" })
       .setOrigin(0.5, 0)
       .setDepth(1000)
       .setScrollFactor(0);
@@ -85,9 +85,7 @@ export default class UISystem {
     const ps = scene.playerStats;
 
     // Enemy count
-    this.enemyCounterText.setText(
-      "Enemies: " + scene.enemies.countActive(true),
-    );
+    this.enemyCounterText.setText("Kill Count: " + scene.enemiesKilled);
 
     // Health
     if (!scene.isPlayerDead) {

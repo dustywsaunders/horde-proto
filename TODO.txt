@@ -1,8 +1,35 @@
 TO DO:
 
 GAME FEATURES/REFACTOR:
-- Add health drops to increase total health pool.
 - Extract WeaponSystem (multi-shot, spread, cooldowns)
 - Extract EnemyAISystem (smarter enemies, variety, bosses)
-- Extract UpgradeSystem
+- Juice & feel (screen shake, hit stop, sound hooks)
 - Add damage events & modifiers
+- Visuals (sprites? Pixels? Backgrounds? Generate or static?)
+
+Definition
+- Are you a survivor? A drone? A wizard? A machine?
+- Are enemies organic, mechanical, abstract?
+- Is this chaotic, clean, creepy, playful?
+
+Visual identity
+- Shapes → characters
+- Color language (danger, healing, XP, elites)
+- Backgrounds that aren’t just empty space
+
+Game feel
+- Screen shake
+- Hit stop
+- Trails, flashes, impact cues
+- Subtle motion on idle objects
+
+Claws on the Course
+A Disc Golf Survival Game
+
+📊 Stat Mapping (Fits Your Current Code)
+Disc	Speed	Damage	Fire Rate	Feel
+Putter	Low	Low	High	Control
+Mid	Medium	Medium	Medium	Balance
+Fairway	High	High	Medium	Power
+Distance	Very High	Very High	Lower	Burst
+

@@ -9,11 +9,11 @@ export default class StartScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     // Background
-    this.add.rectangle(width / 2, height / 2, width, height, 0x000000);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x5c9e67);
 
     // Title
     this.add
-      .text(width / 2, 120, "HORDE SHOOTER", {
+      .text(width / 2, 120, "Claws on the Course", {
         fontSize: "48px",
         fill: "#ffffff",
         fontStyle: "bold",
@@ -26,18 +26,21 @@ export default class StartScene extends Phaser.Scene {
         width / 2,
         240,
         `
-WASD / Arrow Keys - Move/Select
-ENTER / SPACE - Choose Upgrades
-ESC - Pause Game
+Crayfish are taking over your local disc golf course
+There is only one solution - DISCS
 
-Auto attacks nearest enemy
-Survive as long as possible
+Use WASD / Arrow Keys to Move
+ENTER / SPACE to Choose Upgrades
+ESC to Pause Game
+
+Auto throw discs at nearest enemy
+KILL THEM ALL!
 
 Press ENTER or SPACE to start
       `,
         {
-          fontSize: "20px",
-          fill: "#cccccc",
+          fontSize: "18px",
+          fill: "#e1e0e0ff",
           align: "center",
           lineSpacing: 10,
         },

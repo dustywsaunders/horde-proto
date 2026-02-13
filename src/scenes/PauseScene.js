@@ -24,12 +24,12 @@ export default class PauseScene extends Phaser.Scene {
         width / 2,
         340,
         `
-ENTER / SPACE - Resume
-ESC - Exit to Menu
+Press ENTER / SPACE to Resume
+Press ESC to Exit to Menu
       `,
         {
           fontSize: "20px",
-          fill: "#cccccc",
+          fill: "#ffffff",
           align: "center",
           lineSpacing: 10,
         },
