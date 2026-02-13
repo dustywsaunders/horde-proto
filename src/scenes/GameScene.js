@@ -24,6 +24,14 @@ export default class GameScene extends Phaser.Scene {
       xpToLevel: 50,
     };
 
+    // Projectile timer
+    this.fireTimer = this.time.addEvent({
+      delay: this.playerStats.fireRate,
+      callback: this.fireProjectile,
+      callbackScope: this,
+      loop: true,
+    });
+
     // Add simple player placeholder
     this.player = this.add.rectangle(400, 300, 40, 40, 0x00ff00);
     this.physics.add.existing(this.player);
@@ -78,13 +86,6 @@ export default class GameScene extends Phaser.Scene {
 
     // Projectiles
     this.projectiles = this.physics.add.group();
-
-    this.time.addEvent({
-      delay: this.playerStats.fireRate, // ms between shots
-      callback: this.fireProjectile,
-      callbackScope: this,
-      loop: true,
-    });
 
     // XP Drops
     this.xpOrbs = this.physics.add.group();
@@ -209,7 +210,11 @@ export default class GameScene extends Phaser.Scene {
         key: "fireRate",
         label: "Increase Fire Rate (-50)",
         apply: () => {
-          this.fireRate -= 50;
+          this.playerStats.fireRate = Math.max(
+            100,
+            this.playerStats.fireRate - 50,
+          );
+          this.updateFireRate(); // refresh the timer
         },
       },
       {
@@ -241,6 +246,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // --- FUNCTIONS --- //
+
+  // --- UI --- //
 
   updateUI() {
     this.enemyCounterText.setText("Enemies: " + this.enemies.countActive(true));
@@ -290,6 +297,8 @@ export default class GameScene extends Phaser.Scene {
     this.timerText.setText(`${minutes}:${paddedSeconds}`);
   }
 
+  // --- PLAYER --- //
+
   handlePlayerMovement() {
     const speed = this.playerStats.moveSpeed;
     const body = this.player.body;
@@ -307,56 +316,6 @@ export default class GameScene extends Phaser.Scene {
     } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
       body.setVelocityY(speed);
     }
-  }
-
-  spawnEnemy() {
-    const { width, height } = this.scale;
-
-    // Random edge spawn
-    let x, y;
-    const side = Phaser.Math.Between(0, 3);
-
-    if (side === 0) {
-      x = 0;
-      y = Phaser.Math.Between(0, height);
-    } else if (side === 1) {
-      x = width;
-      y = Phaser.Math.Between(0, height);
-    } else if (side === 2) {
-      x = Phaser.Math.Between(0, width);
-      y = 0;
-    } else {
-      x = Phaser.Math.Between(0, width);
-      y = height;
-    }
-
-    const enemy = this.add.rectangle(x, y, 25, 25, 0xff0000);
-    this.physics.add.existing(enemy);
-    enemy.body.setAllowGravity(false);
-    enemy.body.setImmovable(true);
-    enemy.body.setCircle(12);
-    enemy.body.setCollideWorldBounds(true);
-    enemy.maxHp = this.enemyStats.maxHp;
-    enemy.hp = enemy.maxHp;
-    enemy.xpValue = this.enemyStats.xpValue;
-    enemy.isDead = false;
-    enemy.setFillStyle(0xff0000);
-    enemy.setDepth(3);
-
-    this.enemies.add(enemy);
-  }
-
-  handleEnemyMovement() {
-    this.enemies.getChildren().forEach((enemy) => {
-      const dx = this.player.x - enemy.x;
-      const dy = this.player.y - enemy.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-
-      if (length > 0) {
-        const speed = this.enemyStats.moveSpeed;
-        enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
-      }
-    });
   }
 
   handlePlayerHit(player, enemy) {
@@ -421,6 +380,60 @@ export default class GameScene extends Phaser.Scene {
     this.player.body.setVelocity(0);
     return true;
   }
+
+  // --- ENEMIES --- //
+
+  spawnEnemy() {
+    const { width, height } = this.scale;
+
+    // Random edge spawn
+    let x, y;
+    const side = Phaser.Math.Between(0, 3);
+
+    if (side === 0) {
+      x = 0;
+      y = Phaser.Math.Between(0, height);
+    } else if (side === 1) {
+      x = width;
+      y = Phaser.Math.Between(0, height);
+    } else if (side === 2) {
+      x = Phaser.Math.Between(0, width);
+      y = 0;
+    } else {
+      x = Phaser.Math.Between(0, width);
+      y = height;
+    }
+
+    const enemy = this.add.rectangle(x, y, 25, 25, 0xff0000);
+    this.physics.add.existing(enemy);
+    enemy.body.setAllowGravity(false);
+    enemy.body.setImmovable(true);
+    enemy.body.setCircle(12);
+    enemy.body.setCollideWorldBounds(true);
+    enemy.maxHp = this.enemyStats.maxHp;
+    enemy.hp = enemy.maxHp;
+    enemy.xpValue = this.enemyStats.xpValue;
+    enemy.isDead = false;
+    enemy.setFillStyle(0xff0000);
+    enemy.setDepth(3);
+
+    this.enemies.add(enemy);
+  }
+
+  handleEnemyMovement() {
+    this.enemies.getChildren().forEach((enemy) => {
+      const dx = this.player.x - enemy.x;
+      const dy = this.player.y - enemy.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length > 0) {
+        const speed = this.enemyStats.moveSpeed;
+        enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
+      }
+    });
+  }
+
+  // --- PROJECTILES --- //
 
   fireProjectile() {
     if (this.isPlayerDead) return; // don't shoot when dead
@@ -508,6 +521,21 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  updateFireRate() {
+    if (this.fireTimer) {
+      this.fireTimer.remove(false); // remove old timer
+    }
+
+    this.fireTimer = this.time.addEvent({
+      delay: this.playerStats.fireRate,
+      callback: this.fireProjectile,
+      callbackScope: this,
+      loop: true,
+    });
+  }
+
+  // --- XP --- //
+
   spawnXpOrb(x, y, value) {
     const orb = this.add.circle(x, y, 6, 0x00aaff);
     this.physics.add.existing(orb);
@@ -523,6 +551,8 @@ export default class GameScene extends Phaser.Scene {
     orb.destroy();
     this.checkLevelUp();
   }
+
+  // --- LEVEL UPS --- //
 
   checkLevelUp() {
     while (this.playerStats.xp >= this.playerStats.xpToLevel) {
