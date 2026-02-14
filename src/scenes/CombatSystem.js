@@ -35,12 +35,12 @@ export default class CombatSystem {
     });
 
     const projectile = scene.add.sprite(scene.player.x, scene.player.y, "disc");
-    projectile.setDisplaySize(16, 16);
-    projectile.rotation += 1;
+    projectile.setDisplaySize(20, 20);
+    projectile.rotationSpeed = 0.25;
 
     scene.physics.add.existing(projectile);
     projectile.body.setAllowGravity(false);
-    projectile.speed = 400;
+    projectile.speed = 300;
     projectile.target = closest;
 
     scene.projectiles.add(projectile);
@@ -54,6 +54,8 @@ export default class CombatSystem {
         proj.destroy();
         return;
       }
+
+      proj.rotation += proj.rotationSpeed;
 
       const dx = proj.target.x - proj.x;
       const dy = proj.target.y - proj.y;
@@ -98,9 +100,11 @@ export default class CombatSystem {
     enemy.hp -= scene.playerStats.damage;
 
     enemy.setTint(0xffaaaa);
+    enemy.setScale(1.5);
 
-    this.scene.time.delayedCall(50, () => {
+    this.scene.time.delayedCall(80, () => {
       if (enemy.active) enemy.clearTint();
+      enemy.setScale(1.25);
     });
 
     if (enemy.hp <= 0 && !enemy.isDead) {

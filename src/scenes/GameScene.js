@@ -394,7 +394,6 @@ export default class GameScene extends Phaser.Scene {
     enemy.body.setCollideWorldBounds(true);
     enemy.xpValue = this.enemyStats.xpValue;
     enemy.isDead = false;
-    enemy.setTint(0xffaaaa);
     enemy.setDepth(3);
 
     const difficulty = this.getDifficultyMultiplier();
