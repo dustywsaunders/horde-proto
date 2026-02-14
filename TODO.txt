@@ -7,29 +7,212 @@ GAME FEATURES/REFACTOR:
 - Add damage events & modifiers
 - Visuals (sprites? Pixels? Backgrounds? Generate or static?)
 
-Definition
-- Are you a survivor? A drone? A wizard? A machine?
-- Are enemies organic, mechanical, abstract?
-- Is this chaotic, clean, creepy, playful?
-
-Visual identity
-- Shapes → characters
-- Color language (danger, healing, XP, elites)
-- Backgrounds that aren’t just empty space
-
-Game feel
-- Screen shake
-- Hit stop
-- Trails, flashes, impact cues
-- Subtle motion on idle objects
-
+Game:
 Claws on the Course
 A Disc Golf Survival Game
 
+Identity:
+
+Game Ideals:
+The player never feels safe
+The player never feels hopeless
+Every upgrade feels like relief, not dominance
+“One or two good choices away” is the emotional loop
+That demands gradual scaling and controlled progression pacing.
+
+Future Evolutions:
 📊 Stat Mapping (Fits Your Current Code)
 Disc	Speed	Damage	Fire Rate	Feel
 Putter	Low	Low	High	Control
 Mid	Medium	Medium	Medium	Balance
 Fairway	High	High	Medium	Power
 Distance	Very High	Very High	Lower	Burst
+
+First BIG refactor:
+
+
+1️⃣ Time-Based Enemy Scaling (Pressure Backbone)
+
+Goal:
+
+Difficulty increases subtly over time, independent of player level.
+
+Decisions locked
+
+Scaling is gradual
+
+Scaling is based on run time
+
+Player should feel it over time, not minute-to-minute
+
+Action plan
+
+Introduce a single difficultyMultiplier based on runTime
+
+Apply it on enemy spawn only
+
+Scale HP strongly, speed lightly
+
+✅ No spikes
+✅ No level-based scaling
+❌ No enemy damage scaling (yet)
+
+2️⃣ XP & Leveling Scaling (Pacing the Arms Race)
+
+Goal:
+Upgrades arrive just slightly slower than difficulty increases.
+
+Decisions locked
+
+XP requirements scale with time, not level
+
+XP drops stay flat (for now)
+
+Player is always “almost keeping up”
+
+Action plan
+
+Scale xpToLevel using run time
+
+Ensure XP curve grows slower than difficulty
+
+Reset cleanly on new run
+
+✅ Prevents over-leveling
+✅ Preserves “one upgrade away” feeling
+❌ No XP drop scaling yet
+
+3️⃣ Enemy Speed Exploit Fix (Non-Negotiable)
+
+Goal:
+Enemies are never allowed to stop being a threat.
+
+Decisions locked
+
+Enemy slow can exist
+
+Enemy speed must have a hard floor
+
+AFK builds must die
+
+Action plan
+
+Define base enemy speed
+
+Clamp modified speed to ≥ ~50% of base
+
+Apply clamp after all modifiers
+
+✅ Slows still feel good
+❌ Enemies never stop moving
+
+4️⃣ Upgrade Philosophy (What Upgrades Are Allowed to Do)
+
+Goal:
+Upgrades help the player manage pressure, not remove it.
+
+Decisions locked
+
+Upgrades may:
+
+Improve control
+
+Improve survivability
+
+Improve efficiency
+
+Upgrades may not:
+
+Remove enemy threat entirely
+
+Stack infinitely without friction
+
+Solve the game on their own
+
+Action plan
+
+Keep upgrade list small and intentional
+
+Reduce magnitude of flat stat increases
+
+Add soft limits (rarity, caps, diminishing impact)
+
+❌ No tradeoffs yet
+❌ No evolutions yet
+❌ No scaling upgrades with time
+
+5️⃣ Problematic Upgrades (Immediate Handling)
+
+Goal:
+Remove or neutralize dominant strategies.
+
+Decisions locked
+
+Flat enemy speed reduction is dangerous
+
+Large flat damage jumps are dangerous
+
+XP multiplier fights time-based scaling
+
+Action plan
+
+Rework enemy slow into situational / temporary
+
+Reduce damage upgrade increments
+
+Cap or de-emphasize XP multiplier
+
+✅ Builds remain viable
+❌ Builds never become dominant
+
+6️⃣ Numbers & Early Game Feel (Baseline Sanity)
+
+Goal:
+Early game feels fair, readable, and engaging.
+
+Decisions locked
+
+Enemies take ~2 hits early
+
+Player is pressured but not overwhelmed
+
+First few upgrades feel impactful but not explosive
+
+Action plan
+
+Re-evaluate base damage vs base enemy HP
+
+Reduce early upgrade magnitudes
+
+Test early game without touching scaling constants
+
+🚦 IMPLEMENTATION ORDER (DO NOT MIX)
+
+This order matters.
+
+Phase 1 — Scaling Backbone
+
+Add difficulty multiplier
+
+Apply enemy HP & speed scaling
+
+Add XP scaling
+
+Phase 2 — Exploit Fixes
+
+Clamp enemy speed
+
+Adjust damage upgrade size
+
+Phase 3 — Upgrade Cleanup
+
+Remove / rework enemy slow
+
+Cap or adjust XP multiplier
+
+Limit repeat upgrades
+
+Only move forward when the previous phase feels right.
+
+
 

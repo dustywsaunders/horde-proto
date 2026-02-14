@@ -35,18 +35,26 @@ export default class GameScene extends Phaser.Scene {
     this.runTime = 0; // total run time in ms
     this.lastUpdateTime = 0; // used to calculate delta
 
+    // Define scaling limits
+    this.upgradePickCounts = {};
+    this.baseEnemySpawnDelay = 1200; // ms
+    this.minEnemySpawnDelay = 350; // hard floor
+    this.baseXpToLevel = 75;
+
     // Set default player values
     this.playerStats = {
-      moveSpeed: 200,
+      moveSpeed: 110,
       maxHp: 100,
       hp: 100,
       damage: 15,
-      fireRate: 1000,
+      fireRate: 850,
       xpMultiplier: 1,
       level: 1,
       xp: 0,
-      xpToLevel: 50,
     };
+
+    // Initial XP requirement
+    this.playerStats.xpToLevel = this.baseXpToLevel;
 
     // Projectile timer
     this.fireTimer = this.time.addEvent({
@@ -65,7 +73,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Enemy base stats
     this.enemyStats = {
-      moveSpeed: 80,
+      moveSpeed: 50,
       maxHp: 30,
       xpValue: 10,
     };
@@ -74,11 +82,26 @@ export default class GameScene extends Phaser.Scene {
     this.enemies = this.physics.add.group();
 
     this.enemySpawnEvent = this.time.addEvent({
-      delay: 1000,
+      delay: this.getEnemySpawnDelay(),
       callback: this.spawnEnemy,
       callbackScope: this,
       loop: true,
     });
+
+    if (this.enemySpawnEvent && this.enemySpawnEvent.getProgress() === 0) {
+      const newDelay = this.getEnemySpawnDelay();
+
+      if (this.enemySpawnEvent.delay !== newDelay) {
+        this.enemySpawnEvent.remove(false);
+
+        this.enemySpawnEvent = this.time.addEvent({
+          delay: newDelay,
+          callback: this.spawnEnemy,
+          callbackScope: this,
+          loop: true,
+        });
+      }
+    }
 
     this.physics.add.overlap(
       this.player,
@@ -134,60 +157,66 @@ export default class GameScene extends Phaser.Scene {
       this,
     );
 
-    // Player Level
-    this.playerStats.level = 1;
-    this.playerStats.xp = 0;
-    this.playerStats.xpToLevel = 50; // first level threshold
-
     // Upgrades
     this.upgrades = [
       {
         key: "maxHp",
-        label: "Increase Max Health (+10)",
+        label: "+Max HP",
         apply: () => {
-          this.playerStats.maxHp += 10;
+          this.playerStats.maxHp += 15;
+          this.playerStats.hp += 15;
         },
       },
       {
         key: "moveSpeed",
-        label: "Increase Move Speed (+10)",
+        label: "+Move Speed",
         apply: () => {
-          this.playerStats.moveSpeed += 10;
-        },
-      },
-      {
-        key: "enemySlow",
-        label: "Decrease Enemy Speed (-5)",
-        apply: () => {
-          this.enemyStats.moveSpeed = Math.max(
-            20,
-            this.enemyStats.moveSpeed - 5,
-          );
+          const count = this.upgradePickCounts.moveSpeed || 0;
+
+          const amount = count < 4 ? 5 : 2;
+          this.playerStats.moveSpeed += amount;
         },
       },
       {
         key: "fireRate",
-        label: "Increase Throw Rate (-50ms)",
+        label: "Throw Faster",
         apply: () => {
+          const MIN_FIRE_RATE = 350;
+
           this.playerStats.fireRate = Math.max(
-            100,
-            this.playerStats.fireRate - 50,
+            this.playerStats.fireRate - 75,
+            MIN_FIRE_RATE,
           );
-          this.updateFireRate(); // refresh the timer
+
+          this.updateFireRate();
         },
       },
       {
         key: "damage",
-        label: "Increase Disc Damage (+10)",
+        label: "+Damage",
         apply: () => {
-          this.playerStats.damage += 10;
+          const count = this.upgradePickCounts.damage || 0;
+
+          let amount;
+          if (count < 3) {
+            amount = 3;
+          } else if (count < 6) {
+            amount = 2;
+          } else {
+            amount = 1;
+          }
+
+          this.playerStats.damage += amount;
         },
       },
       {
         key: "xpBoost",
-        label: "Increase XP Per Orb (+0.2)",
+        label: "Increase XP Per Orb (+10%)",
         apply: () => {
-          this.playerStats.xpMultiplier += 0.2;
+          this.playerStats.xpMultiplier = Math.min(
+            this.playerStats.xpMultiplier + 0.1,
+            1.5,
+          );
         },
       },
     ];
@@ -225,8 +254,6 @@ export default class GameScene extends Phaser.Scene {
     this.combat.updateProjectiles();
     this.ui.update();
   }
-
-  // --- FUNCTIONS --- //
 
   // --- PLAYER --- //
 
@@ -328,6 +355,15 @@ export default class GameScene extends Phaser.Scene {
 
   // --- ENEMIES --- //
 
+  getEnemySpawnDelay() {
+    const minutes = this.getRunTimeMinutes();
+
+    // Gradual reduction over time
+    const delay = this.baseEnemySpawnDelay * (1 - minutes * 0.1); // Higher number = faster spaws
+
+    return Math.max(this.minEnemySpawnDelay, Math.floor(delay));
+  }
+
   spawnEnemy() {
     const { width, height } = this.scale;
 
@@ -356,12 +392,22 @@ export default class GameScene extends Phaser.Scene {
     enemy.body.setImmovable(true);
     enemy.body.setCircle(12);
     enemy.body.setCollideWorldBounds(true);
-    enemy.maxHp = this.enemyStats.maxHp;
-    enemy.hp = enemy.maxHp;
     enemy.xpValue = this.enemyStats.xpValue;
     enemy.isDead = false;
     enemy.setTint(0xffaaaa);
     enemy.setDepth(3);
+
+    const difficulty = this.getDifficultyMultiplier();
+
+    // Scale HP strongly
+    enemy.maxHp = Math.floor(this.enemyStats.maxHp * difficulty);
+    enemy.hp = enemy.maxHp;
+
+    // Store base speed for clamping later
+    enemy.baseSpeed = this.enemyStats.moveSpeed;
+
+    // Scale speed lightly
+    enemy.moveSpeed = enemy.baseSpeed * (1 + (difficulty - 1) * 0.4);
 
     this.enemies.add(enemy);
   }
@@ -373,7 +419,10 @@ export default class GameScene extends Phaser.Scene {
       const length = Math.sqrt(dx * dx + dy * dy);
 
       if (length > 0) {
-        const speed = this.enemyStats.moveSpeed;
+        const speed = Math.max(
+          enemy.baseSpeed * 0.5, // hard floor (50%)
+          enemy.moveSpeed,
+        );
         enemy.body.setVelocity((dx / length) * speed, (dy / length) * speed);
       }
     });
@@ -438,7 +487,13 @@ export default class GameScene extends Phaser.Scene {
     while (this.playerStats.xp >= this.playerStats.xpToLevel) {
       this.playerStats.xp -= this.playerStats.xpToLevel;
       this.playerStats.level += 1;
-      this.playerStats.xpToLevel = Math.floor(this.playerStats.xpToLevel * 1.3);
+
+      const minutes = this.getRunTimeMinutes();
+
+      // XP scales with time, slightly slower than difficulty
+      this.playerStats.xpToLevel = Math.floor(
+        this.baseXpToLevel * (1 + minutes * 0.33), // Higher number means slower level ups
+      );
 
       this.showUpgradeMenu();
     }
@@ -547,6 +602,9 @@ export default class GameScene extends Phaser.Scene {
     ) {
       const chosen = this.currentUpgradeChoices[this.selectedUpgradeIndex];
       chosen.apply();
+      this.upgradePickCounts[chosen.key] =
+        (this.upgradePickCounts[chosen.key] || 0) + 1;
+
       this.closeUpgradeMenu();
     }
 
@@ -580,5 +638,16 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.statsText.destroy();
+  }
+
+  // --- CORE FUNCTIONS --- //
+
+  getRunTimeMinutes() {
+    return this.runTime / 60000;
+  }
+
+  getDifficultyMultiplier() {
+    // Subtle, continuous pressure
+    return 1 + this.getRunTimeMinutes() * 0.12;
   }
 }
