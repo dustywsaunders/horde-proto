@@ -401,13 +401,21 @@ export default class GameScene extends Phaser.Scene {
 
     // Scale HP strongly
     enemy.maxHp = Math.floor(this.enemyStats.maxHp * difficulty);
-    enemy.hp = enemy.maxHp;
 
     // Store base speed for clamping later
     enemy.baseSpeed = this.enemyStats.moveSpeed;
 
     // Scale speed lightly
     enemy.moveSpeed = enemy.baseSpeed * (1 + (difficulty - 1) * 0.4);
+
+    // Define enemy type
+    const isSprinter = Math.random() < 0.35;
+    enemy.type = isSprinter ? "sprinter" : "walker";
+    enemy.maxHp = isSprinter
+      ? Math.floor(this.enemyStats.maxHp * 0.6)
+      : enemy.maxHp;
+    enemy.hp = enemy.maxHp;
+    enemy.moveSpeed = isSprinter ? enemy.moveSpeed * 1.4 : enemy.moveSpeed;
 
     this.enemies.add(enemy);
   }
@@ -558,7 +566,6 @@ export default class GameScene extends Phaser.Scene {
         Disc Speed: ${this.playerStats.moveSpeed}
         Disc Damage: ${this.playerStats.damage}
         Throw Rate: 1/${this.playerStats.fireRate}ms
-        Enemy Speed: ${this.enemyStats.moveSpeed}
         XP Multiplier: x ${this.playerStats.xpMultiplier}
         `,
         {
