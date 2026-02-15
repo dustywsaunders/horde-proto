@@ -78,6 +78,16 @@ export default class UISystem {
       .setOrigin(0.5, 0)
       .setDepth(1000)
       .setScrollFactor(0);
+
+    // Disc text
+    this.discText = scene.add
+      .text(400, 34, "Disc: Putter", {
+        fontSize: "14px",
+        fill: "#393939ff",
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(1000)
+      .setScrollFactor(0);
   }
 
   update() {
@@ -108,7 +118,7 @@ export default class UISystem {
     // XP
     const xpPercent = Phaser.Math.Clamp(ps.xp / ps.xpToLevel, 0, 1);
     this.xpBar.width = Math.floor(200 * xpPercent);
-    this.xpText.setText(`${ps.xp} / ${ps.xpToLevel}`);
+    this.xpText.setText(`${Math.floor(ps.xp)} / ${ps.xpToLevel}`);
     this.levelText.setText("Level: " + ps.level);
 
     // Timer
@@ -117,5 +127,8 @@ export default class UISystem {
     const seconds = totalSeconds % 60;
 
     this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, "0")}`);
+
+    // Disc text
+    this.discText.setText(`Disc: ${scene.currentDisc.name}`);
   }
 }

@@ -40,7 +40,7 @@ export default class GameScene extends Phaser.Scene {
     this.upgradePickCounts = {};
     this.baseEnemySpawnDelay = 1200; // ms
     this.minEnemySpawnDelay = 350; // hard floor
-    this.baseXpToLevel = 75;
+    this.baseXpToLevel = 60;
 
     // Set default player values
     this.playerStats = {
@@ -56,6 +56,18 @@ export default class GameScene extends Phaser.Scene {
 
     // Initial XP requirement
     this.playerStats.xpToLevel = this.baseXpToLevel;
+
+    // Disc Tiers
+    this.discTiers = [
+      { name: "Putter", unlockLevel: 0 },
+      { name: "Midrange", unlockLevel: 10 },
+      { name: "Fairway", unlockLevel: 20 },
+      { name: "Distance", unlockLevel: 30 },
+      { name: "Prototype", unlockLevel: 40 },
+    ];
+
+    this.currentDiscIndex = 0;
+    this.currentDisc = this.discTiers[0];
 
     // Projectile timer
     this.fireTimer = this.time.addEvent({
@@ -259,22 +271,27 @@ export default class GameScene extends Phaser.Scene {
   // --- PLAYER --- //
 
   handlePlayerMovement() {
-    const speed = this.playerStats.moveSpeed;
     const body = this.player.body;
 
-    body.setVelocity(0);
+    let dx = 0;
+    let dy = 0;
 
-    if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
-      body.setVelocityX(-speed);
-    } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
-      body.setVelocityX(speed);
+    if (this.keys.left.isDown || this.keys.leftArrow.isDown) dx -= 1;
+    if (this.keys.right.isDown || this.keys.rightArrow.isDown) dx += 1;
+    if (this.keys.up.isDown || this.keys.upArrow.isDown) dy -= 1;
+    if (this.keys.down.isDown || this.keys.downArrow.isDown) dy += 1;
+
+    const length = Math.hypot(dx, dy);
+
+    if (length > 0) {
+      dx /= length;
+      dy /= length;
     }
 
-    if (this.keys.up.isDown || this.keys.upArrow.isDown) {
-      body.setVelocityY(-speed);
-    } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
-      body.setVelocityY(speed);
-    }
+    body.setVelocity(
+      dx * this.playerStats.moveSpeed,
+      dy * this.playerStats.moveSpeed,
+    );
   }
 
   handlePlayerHit(player, enemy) {
@@ -441,7 +458,23 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  // --- PROJECTILES --- //
+  // --- DISCS --- //
+
+  updateDiscEvolution() {
+    for (let i = this.discTiers.length - 1; i >= 0; i--) {
+      if (this.playerStats.level >= this.discTiers[i].unlockLevel) {
+        if (this.currentDiscIndex !== i) {
+          this.currentDiscIndex = i;
+          this.currentDisc = this.discTiers[i];
+
+          // Small visual feedback
+          this.player.setTint(0x88ff88);
+          this.time.delayedCall(250, () => this.player.clearTint());
+        }
+        break;
+      }
+    }
+  }
 
   updateFireRate() {
     if (this.fireTimer) {
@@ -500,6 +533,7 @@ export default class GameScene extends Phaser.Scene {
     while (this.playerStats.xp >= this.playerStats.xpToLevel) {
       this.playerStats.xp -= this.playerStats.xpToLevel;
       this.playerStats.level += 1;
+      this.updateDiscEvolution();
 
       const minutes = this.getRunTimeMinutes();
 
@@ -571,7 +605,7 @@ export default class GameScene extends Phaser.Scene {
         Disc Speed: ${this.playerStats.moveSpeed}
         Disc Damage: ${this.playerStats.damage}
         Throw Rate: 1/${this.playerStats.fireRate}ms
-        XP Multiplier: x ${this.playerStats.xpMultiplier}
+        XP Multiplier: x ${this.playerStats.xpMultiplier.toFixed(1)}
         `,
         {
           fontSize: "16px", // slightly smaller
@@ -582,6 +616,34 @@ export default class GameScene extends Phaser.Scene {
       )
       .setOrigin(0.65, 0.9) // center horizontally
       .setDepth(2001);
+
+    // Disc
+    const discInfoY = 500;
+
+    this.discTierTexts = [];
+
+    this.discTiers.forEach((disc, index) => {
+      const unlocked = this.playerStats.level >= disc.unlockLevel;
+
+      const text = this.add
+        .text(
+          400,
+          discInfoY + index * 18,
+          `${disc.unlockLevel}+  ${disc.name}`,
+          {
+            fontSize: "14px",
+            fill: unlocked ? "#ffffff" : "#666666",
+          },
+        )
+        .setOrigin(0.5)
+        .setDepth(2001);
+
+      if (index === this.currentDiscIndex) {
+        text.setColor("#88ff88"); // current disc highlight
+      }
+
+      this.discTierTexts.push(text);
+    });
   }
 
   handleUpgradeInput() {
@@ -650,6 +712,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.statsText.destroy();
+
+    // Discs
+    if (this.discTierTexts) {
+      this.discTierTexts.forEach((t) => t.destroy());
+      this.discTierTexts = [];
+    }
   }
 
   // --- CORE FUNCTIONS --- //
