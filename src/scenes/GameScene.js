@@ -21,6 +21,7 @@ export default class GameScene extends Phaser.Scene {
     // Reset Safety
     this.isPlayerDead = false;
     this.isPlayerFlashing = false;
+    this.lastCameraShakeTime = 0;
 
     // Define systems
     this.ui = new UISystem(this);
@@ -295,6 +296,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   handlePlayerHit(player, enemy) {
+    if (this.isPlayerDead) return;
+
     const now = this.time.now;
 
     if (now < this.lastDamageTime + this.damageCooldown) {
@@ -323,6 +326,12 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
+    // Camera shake ONLY if player is alive
+    if (!this.isPlayerDead && now - this.lastCameraShakeTime > 150) {
+      this.cameras.main.shake(50, 0.002);
+      this.lastCameraShakeTime = now;
+    }
+
     if (this.playerStats.hp < 0) {
       this.playerStats.hp = 0;
     }
@@ -331,7 +340,10 @@ export default class GameScene extends Phaser.Scene {
     if (this.playerStats.hp <= 0 && !this.isPlayerDead) {
       this.isPlayerDead = true;
       this.playerStats.hp = 0;
-      // this.player.setFillStyle(0x555555);
+      this.player.body.setVelocity(0, 0);
+
+      // Stop camera effects
+      this.cameras.main.resetFX();
 
       // Stop spawning
       this.enemySpawnEvent.remove(false);
@@ -372,7 +384,7 @@ export default class GameScene extends Phaser.Scene {
   handleDeathState() {
     if (!this.isPlayerDead) return false;
 
-    this.player.body.setVelocity(0);
+    this.player.body.setVelocity(0, 0);
     return true;
   }
 

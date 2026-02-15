@@ -115,21 +115,35 @@ export default class CombatSystem {
   killEnemy(enemy) {
     const scene = this.scene;
 
+    // Decide to drop XP or HEALTH
+    // Currently at 20/80 Health to XP ratio
+    const dropRoll = Math.random();
+
     enemy.isDead = true;
     const { x, y } = enemy;
 
     scene.enemiesKilled++;
 
-    enemy.destroy();
+    // Stop movement
+    enemy.body.setVelocity(0);
 
-    // Decide to drop XP or HEALTH
-    // Currently at 20/80 Health to XP ratio
-    const dropRoll = Math.random();
+    // Death pop
+    enemy.setScale(1.4);
 
-    if (dropRoll < 0.2) {
-      scene.spawnHealthPickup(x, y, 10);
-    } else {
-      scene.spawnXpOrb(x, y, enemy.xpValue);
-    }
+    // Fade out quickly
+    scene.tweens.add({
+      targets: enemy,
+      alpha: 0,
+      scale: 0,
+      duration: 120,
+      onComplete: () => {
+        enemy.destroy();
+        if (dropRoll < 0.2) {
+          scene.spawnHealthPickup(x, y, 10);
+        } else {
+          scene.spawnXpOrb(x, y, enemy.xpValue);
+        }
+      },
+    });
   }
 }
